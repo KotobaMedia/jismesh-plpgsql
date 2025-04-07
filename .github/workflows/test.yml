@@ -1,0 +1,39 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up PostgreSQL
+        id: postgres
+        uses: ikalnytskyi/action-setup-postgres@v7
+        with:
+          postgres-version: 17
+
+      - name: Install PostgreSQL extensions
+        run: |
+          sudo apt-get install -y postgresql-17-postgis-3 postgresql-17-pgtap
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up database
+        run: |
+          psql -f tests/setup.sql
+          psql -f jismesh.sql
+        env:
+          PGSERVICE: ${{ steps.postgres.outputs.service-name }}
+
+      - name: Run test
+        run: pg_prove tests/*_test.sql
+        env:
+          PGSERVICE: ${{ steps.postgres.outputs.service-name }}
