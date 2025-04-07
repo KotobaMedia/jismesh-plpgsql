@@ -23,7 +23,7 @@ WITH test_data(meshcode, lat_multiplier, lon_multiplier, expected_lat, expected_
 -- For each test case, compare the generated geometry with the expected point.
 SELECT ok(
   ST_DWithin(
-    to_meshpoint_geom(meshcode, lat_multiplier, lon_multiplier),
+    jismesh.to_meshpoint_geom(meshcode, lat_multiplier, lon_multiplier),
     ST_SetSRID(ST_MakePoint(expected_lon, expected_lat), 4326),
     1e-6
   ),

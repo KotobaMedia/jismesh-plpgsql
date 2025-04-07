@@ -24,9 +24,9 @@ WITH tokyo_tests AS (
   ) AS t(level, expected)
 )
 SELECT is(
-  to_meshcode(
+  jismesh.to_meshcode(
     ST_SetSRID(ST_MakePoint(139.745433, 35.658581), 4326),
-    level::mesh_level
+    level::jismesh.mesh_level
   ),
   expected,
   'Tokyo: to_meshcode for ' || level
@@ -55,9 +55,9 @@ WITH kyoto_tests AS (
   ) AS t(level, expected)
 )
 SELECT is(
-  to_meshcode(
+  jismesh.to_meshcode(
     ST_SetSRID(ST_MakePoint(135.759363, 34.987574), 4326),
-    level::mesh_level
+    level::jismesh.mesh_level
   ),
   expected,
   'Kyoto: to_meshcode for ' || level

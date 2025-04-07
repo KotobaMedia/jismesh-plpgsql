@@ -42,9 +42,9 @@ WITH tests AS (
 SELECT
   CASE
     WHEN expected IS NULL THEN
-      ok(to_meshlevel(meshcode) IS NULL, description)
+      ok(jismesh.to_meshlevel(meshcode) IS NULL, description)
     ELSE
-      is(to_meshlevel(meshcode), expected::mesh_level, description)
+      is(jismesh.to_meshlevel(meshcode), expected::jismesh.mesh_level, description)
   END
 FROM tests;
 

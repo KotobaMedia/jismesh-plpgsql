@@ -2,12 +2,12 @@ BEGIN;
 SELECT plan(1);
 
 CREATE TABLE meshcodes AS (
-    SELECT meshcode, ST_AsText(geom) as "geom" FROM to_meshcodes(
-        ST_MakeBox2D(
-            ST_SetSRID(ST_MakePoint(139.745433, 35.658581), 4326),
-            ST_SetSRID(ST_MakePoint(135.759363, 34.987574), 4326)
-        ),
-        'Lv1'::mesh_level
+    SELECT meshcode, ST_AsText(geom) as "geom" FROM jismesh.to_meshcodes(
+        ST_SetSRID(ST_MakeBox2D(
+            ST_MakePoint(139.745433, 35.658581),
+            ST_MakePoint(135.759363, 34.987574)
+        ), 4326),
+        'Lv1'::jismesh.mesh_level
     )
 );
 
