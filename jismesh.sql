@@ -1,11 +1,7 @@
 CREATE SCHEMA IF NOT EXISTS jismesh;
 
--- Drop type and function if they exist (for easy re-running)
-DROP FUNCTION IF EXISTS jismesh.jismesh.to_meshlevel(bigint);
-DROP TYPE IF EXISTS jismesh.mesh_level;
-
 -- Define the jismesh.mesh_level enum type
-CREATE TYPE jismesh.mesh_level AS ENUM (
+CREATE TYPE IF NOT EXISTS jismesh.mesh_level AS ENUM (
     'Lv1',
     'X40',
     'Lv2',
@@ -23,8 +19,7 @@ CREATE TYPE jismesh.mesh_level AS ENUM (
 );
 
 -- Create a table to store Japan's Lv1 mesh codes
-DROP TABLE IF EXISTS jismesh.japan_lv1_meshes;
-CREATE TABLE jismesh.japan_lv1_meshes (
+CREATE TABLE IF NOT EXISTS jismesh.japan_lv1_meshes (
     meshcode bigint PRIMARY KEY
 );
 INSERT INTO jismesh.japan_lv1_meshes (meshcode) VALUES
@@ -38,8 +33,9 @@ INSERT INTO jismesh.japan_lv1_meshes (meshcode) VALUES
     (5035), (5034), (5033), (5032), (5031), (5030), (5029), (4939), (4934), (4933), (4932), (4931), (4930), (4929), (4928), (4839),
     (4831), (4830), (4829), (4828), (4740), (4739), (4731), (4730), (4729), (4728), (4631), (4630), (4629), (4540), (4531), (4530),
     (4529), (4440), (4429), (4329), (4328), (4230), (4229), (4142), (4129), (4128), (4042), (4040), (4028), (4027), (3942), (3928),
-    (3927), (3926), (3841), (3831), (3824), (3823), (3741), (3725), (3724), (3653), (3641), (3631), (3624), (3623), (3622), (3036);
-CREATE INDEX jismesh.idx_japan_lv1_meshes_meshcode ON jismesh.japan_lv1_meshes(meshcode);
+    (3927), (3926), (3841), (3831), (3824), (3823), (3741), (3725), (3724), (3653), (3641), (3631), (3624), (3623), (3622), (3036)
+ON CONFLICT DO NOTHING;
+CREATE INDEX IF NOT EXISTS jismesh_idx_japan_lv1_meshes_meshcode ON jismesh.japan_lv1_meshes(meshcode);
 
 -- Create the PL/pgSQL function to determine mesh level for a single code
 CREATE OR REPLACE FUNCTION jismesh.to_meshlevel(code bigint)
@@ -718,18 +714,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE STRICT;
 
--- Drop the old table first if it exist
-DROP TABLE IF EXISTS jismesh.mesh_level_units;
-
 -- 1. Create the lookup table
-CREATE TABLE jismesh.mesh_level_units (
+CREATE TABLE IF NOT EXISTS jismesh.mesh_level_units (
     level jismesh.mesh_level PRIMARY KEY,
     unit_lat double precision NOT NULL,
     unit_lon double precision NOT NULL
 );
 
 -- 2. Populate the table with pre-calculated values
--- You can calculate these once (e.g., using psql or another script)
 DO $$
 DECLARE
     UNIT_LAT_LV1 CONSTANT double precision := 2.0 / 3.0;
@@ -749,7 +741,8 @@ BEGIN
         ('Lv3',  UNIT_LAT_LV1 / 80.0,  UNIT_LON_LV1 / 80.0),
         ('Lv4',  UNIT_LAT_LV1 / 160.0, UNIT_LON_LV1 / 160.0),
         ('Lv5',  UNIT_LAT_LV1 / 320.0, UNIT_LON_LV1 / 320.0),
-        ('Lv6',  UNIT_LAT_LV1 / 640.0, UNIT_LON_LV1 / 640.0);
+        ('Lv6',  UNIT_LAT_LV1 / 640.0, UNIT_LON_LV1 / 640.0)
+    ON CONFLICT (level) DO NOTHING;
 END $$;
 
 -- 3. Create functions that query the lookup table
