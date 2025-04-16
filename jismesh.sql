@@ -1,22 +1,26 @@
 CREATE SCHEMA IF NOT EXISTS jismesh;
 
 -- Define the jismesh.mesh_level enum type
-CREATE TYPE IF NOT EXISTS jismesh.mesh_level AS ENUM (
-    'Lv1',
-    'X40',
-    'Lv2',
-    'X5',
-    'X20',
-    'X8',
-    'X16',
-    'Lv3',
-    'Lv4',
-    'X2',
-    'X2_5',
-    'X4',
-    'Lv5',
-    'Lv6'
-);
+DO $$ BEGIN
+    CREATE TYPE jismesh.mesh_level AS ENUM (
+        'Lv1',
+        'X40',
+        'Lv2',
+        'X5',
+        'X20',
+        'X8',
+        'X16',
+        'Lv3',
+        'Lv4',
+        'X2',
+        'X2_5',
+        'X4',
+        'Lv5',
+        'Lv6'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- Create a table to store Japan's Lv1 mesh codes
 CREATE TABLE IF NOT EXISTS jismesh.japan_lv1_meshes (
