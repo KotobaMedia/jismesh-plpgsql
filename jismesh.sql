@@ -41,87 +41,79 @@ INSERT INTO jismesh.japan_lv1_meshes (meshcode) VALUES
 ON CONFLICT DO NOTHING;
 CREATE INDEX IF NOT EXISTS jismesh_idx_japan_lv1_meshes_meshcode ON jismesh.japan_lv1_meshes(meshcode);
 
--- Create the PL/pgSQL function to determine mesh level for a single code
+-- get the n-th digit counting from the left (1-based)
+-- returns NULL if n is out of range
+CREATE OR REPLACE FUNCTION jismesh.digit_at(p_code bigint, p_pos int)
+RETURNS int
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS
+$$
+SELECT CASE
+         WHEN p_pos BETWEEN 1 AND length(p_code::text)
+         THEN substr(p_code::text, p_pos, 1)::int
+         ELSE NULL
+       END;
+$$;
+
+-- determine mesh level for a single code
 CREATE OR REPLACE FUNCTION jismesh.to_meshlevel(code bigint)
-RETURNS jismesh.mesh_level AS $$
+RETURNS jismesh.mesh_level
+LANGUAGE plpgsql
+IMMUTABLE STRICT PARALLEL SAFE AS
+$$
 DECLARE
+    len int := length(code::text);
     level jismesh.mesh_level;
-    num_digits integer;
-    g integer;
-    i integer;
-    j integer;
-    k integer;
 BEGIN
-    -- Check if the input code is NULL or non-positive, return NULL if so
-    IF code IS NULL OR code <= 0 THEN
+    IF code <= 0 THEN   -- STRICT already filters NULL
         RETURN NULL;
     END IF;
 
-    -- Calculate number of digits for the meshcode
-    -- Using log10 requires casting to numeric or double precision
-    -- Handle potential log(0) or negative which shouldn't happen due to above check, but safer
-    BEGIN
-        num_digits := floor(log(code::numeric))::integer + 1;
-    EXCEPTION
-        WHEN invalid_argument_for_logarithm THEN
-            RETURN NULL; -- Should not happen with code > 0 check
-        WHEN others THEN
-            RETURN NULL; -- Catch any other math errors
-    END;
+    CASE len
+        WHEN 4  THEN level := 'Lv1';
+        WHEN 5  THEN level := 'X40';
+        WHEN 6  THEN level := 'Lv2';
 
+        WHEN 7  THEN
+            CASE jismesh.digit_at(code,7)
+                WHEN 1,2,3,4 THEN level := 'X5';
+                WHEN 5        THEN level := 'X20';
+                WHEN 6        THEN level := 'X8';
+                WHEN 7        THEN level := 'X16';
+                ELSE RETURN NULL;
+            END CASE;
 
-    -- Determine mesh level based on the number of digits
-    CASE num_digits
-        WHEN 4 THEN
-            level := 'Lv1';
-        WHEN 5 THEN
-            level := 'X40';
-        WHEN 6 THEN
-            level := 'Lv2';
-        WHEN 7 THEN
-            -- Extract the 7th digit (g)
-            g := floor(code / power(10, num_digits - 7))::bigint % 10;
-            CASE g
-                WHEN 1, 2, 3, 4 THEN level := 'X5';
-                WHEN 5 THEN level := 'X20';
-                WHEN 6 THEN level := 'X8';
-                WHEN 7 THEN level := 'X16';
-                ELSE RETURN NULL; -- Invalid g
+        WHEN 8  THEN level := 'Lv3';
+
+        WHEN 9  THEN
+            CASE jismesh.digit_at(code,9)
+                WHEN 1,2,3,4 THEN level := 'Lv4';
+                WHEN 5        THEN level := 'X2';
+                WHEN 6        THEN level := 'X2_5';
+                WHEN 7        THEN level := 'X4';
+                ELSE RETURN NULL;
             END CASE;
-        WHEN 8 THEN
-            level := 'Lv3';
-        WHEN 9 THEN
-            -- Extract the 9th digit (i)
-            i := floor(code / power(10, num_digits - 9))::bigint % 10;
-            CASE i
-                WHEN 1, 2, 3, 4 THEN level := 'Lv4';
-                WHEN 5 THEN level := 'X2';
-                WHEN 6 THEN level := 'X2_5';
-                WHEN 7 THEN level := 'X4';
-                ELSE RETURN NULL; -- Invalid i
-            END CASE;
+
         WHEN 10 THEN
-            -- Extract the 10th digit (j)
-            j := floor(code / power(10, num_digits - 10))::bigint % 10;
-            CASE j
-                WHEN 1, 2, 3, 4 THEN level := 'Lv5';
-                ELSE RETURN NULL; -- Invalid j
-            END CASE;
+            IF jismesh.digit_at(code,10) BETWEEN 1 AND 4 THEN
+                level := 'Lv5';
+            ELSE
+                RETURN NULL;
+            END IF;
+
         WHEN 11 THEN
-            -- Extract the 11th digit (k)
-            k := floor(code / power(10, num_digits - 11))::bigint % 10;
-            CASE k
-                WHEN 1, 2, 3, 4 THEN level := 'Lv6';
-                ELSE RETURN NULL; -- Invalid k
-            END CASE;
+            IF jismesh.digit_at(code,11) BETWEEN 1 AND 4 THEN
+                level := 'Lv6';
+            ELSE
+                RETURN NULL;
+            END IF;
+
         ELSE
-            RETURN NULL; -- Unknown number of digits
+            RETURN NULL;
     END CASE;
 
     RETURN level;
 END;
-$$ LANGUAGE plpgsql IMMUTABLE STRICT;
-
+$$;
 
 CREATE OR REPLACE FUNCTION jismesh.to_meshpoint_geom(
     _meshcode BIGINT,
@@ -716,7 +708,7 @@ BEGIN
 
     RETURN;
 END;
-$$ LANGUAGE plpgsql IMMUTABLE STRICT;
+$$ LANGUAGE plpgsql PARALLEL SAFE IMMUTABLE STRICT;
 
 -- 1. Create the lookup table
 CREATE TABLE IF NOT EXISTS jismesh.mesh_level_units (
