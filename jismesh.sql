@@ -308,7 +308,7 @@ BEGIN
     RETURN ST_SetSRID(ST_MakePoint(lon, lat), 4326);
 
 END;
-$$ LANGUAGE plpgsql IMMUTABLE STRICT; -- Keep STRICT: returns NULL if _meshcode is NULL
+$$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE;
 
 -- Function to create a polygon geometry for a given meshcode
 CREATE OR REPLACE FUNCTION jismesh.to_meshpoly_geom(
@@ -351,7 +351,7 @@ BEGIN
 
     RETURN polygon;
 END;
-$$ LANGUAGE plpgsql IMMUTABLE STRICT; -- STRICT: returns NULL if _meshcode is NULL
+$$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION jismesh.fmod (
    dividend double precision,
@@ -633,7 +633,7 @@ BEGIN
             RETURN NULL;
     END CASE;
 END;
-$$ LANGUAGE plpgsql IMMUTABLE STRICT; -- Function result depends only on inputs
+$$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE;
 
 -- Function to calculate all meshcodes that intersect a given box2d at specified mesh level
 CREATE OR REPLACE FUNCTION jismesh.to_meshcodes(bbox box2d, level jismesh.mesh_level)
@@ -749,7 +749,7 @@ RETURNS double precision AS $$
     FROM jismesh.mesh_level_units m
     WHERE m.level = p_level
     LIMIT 1; -- Good practice, though PRIMARY KEY ensures max 1 row
-$$ LANGUAGE SQL IMMUTABLE STRICT;
+$$ LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE;
 
 CREATE OR REPLACE FUNCTION jismesh.get_unit_lon(p_level jismesh.mesh_level)
 RETURNS double precision AS $$
@@ -757,4 +757,4 @@ RETURNS double precision AS $$
     FROM jismesh.mesh_level_units m
     WHERE m.level = p_level
     LIMIT 1; -- Good practice
-$$ LANGUAGE SQL IMMUTABLE STRICT;
+$$ LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE;
